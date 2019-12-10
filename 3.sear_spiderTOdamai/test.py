@@ -17,10 +17,14 @@ useful = useful.replace(' ','')
 reply = shawReview[0].xpath('div/div/div[@class="action"]/a[contains(@class,"reply ")]/text()')
 # content
 content = shawReview[0].xpath('//*[@id="review_1000369_short"]/div/text()')
-attr = shawReview[0].xpath('//*[@id="review_1000369_short"]/div')
-attr = attr[0].attrib['class']
+attr = shawReview[0].xpath('//*[@id="review_1000369_short"]/div/bbc')
+try:
+    print(attr[0].xpath('text()'))
+except IndexError:
+    print('****')
+#attr = attr[0].attrib['class']
 
-next_page = selector.xpath('//*[@id="content"]/div/div[1]/div[2]/span[4]/a')
+#next_page = selector.xpath('//*[@id="content"]/div/div[1]/div[2]/span[4]/a')
 
-print(1)
+#print(1)
 

@@ -1,0 +1,11 @@
+# no .vscode
+.vscode
+
+# no src
+src
+
+# no book
+动物农场
+
+# no html
+*.html

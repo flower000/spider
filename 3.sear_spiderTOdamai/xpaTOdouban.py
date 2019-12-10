@@ -5,6 +5,8 @@ import re
 import time
 import random
 from fake_useragent import UserAgent       # fake userhead
+import csv
+import pandas as pd
 
 global count
 count = 0
@@ -38,9 +40,8 @@ def GetNextp(node):
     print('{}'.format(count))
 #    selector.xpath('//*[@id="content"]/div/div[1]/div[2]/span[4]/a')
 #//*[@id="content"]/div/div[1]/div[2]/span[contains(@data-total-page,"426")]   
-    try:
-        pageNode = node.xpath('//*[@id="content"]/div/div[1]/div[2]/span[contains(@data-total-page,"426")]')
-    except pageNode.__len__()==0:
+    pageNode = node.xpath('//*[@id="content"]/div/div[1]/div[2]/span[contains(@data-total-page,"426")]')
+    if pageNode.__len__()==0:
         print('*************************')
         return ''
     else:
@@ -53,8 +54,18 @@ def GetNextp(node):
             return temp[0].attrib['href']   
 
 # write .CSV file 
-def writeFile():
-    pass
+def writeFile(name_list, reply_timeList, title_list, content_list, useful_list, useless_list, reply_list):
+    csvdict = {'name':name_list,
+               'reply_time':reply_timeList,
+               'title':title_list,
+               'content':content_list,
+               'useful_com':useful_list,
+               'useless_com':useless_list,
+               'reply':reply_list
+               }
+    df =pd.DataFrame(csvdict)
+    df.to_csv('test.csv', sep = ',', encoding = 'utf-8')
+    #with open('shawshank\'s review', 'w', newline= '') as f:
    
 def shawReview(URL):
     name_list, reply_timeList, title_list, content_list = [], [], [], []
@@ -70,20 +81,23 @@ def shawReview(URL):
         for each in range(shawReview.__len__()):
             tempNode = shawReview[each]
             # oneself
-            name_list.append(GetName(tempNode))
-            reply_timeList.append(GetRetime(tempNode))
-            title_list.append(GetTitle(tempNode))
-            content_list.append(GetContent(tempNode))
-            # followers
-            useful_list.append(GetUseful(tempNode))
-            useless_list.append(GetUseless(tempNode))
-            reply_list.append(GetReplies(tempNode))
+            try:
+                name_list.append(GetName(tempNode)[0])
+                reply_timeList.append(GetRetime(tempNode)[0])
+                title_list.append(GetTitle(tempNode)[0])
+                content_list.append(GetContent(tempNode))
+                # followers
+                useful_list.append(GetUseful(tempNode))
+                useless_list.append(GetUseless(tempNode))
+                reply_list.append(GetReplies(tempNode)[0])
+            except IndexError:
+                pass
         nextPage = GetNextp(selector)
-        if nextPage == '':
+        if count==1000 or nextPage == '':
             break
         doubanURL = URL + nextPage
-        time.spleep(random.randint(0,1))
-        
+        time.sleep(random.randint(0,2))
+    writeFile(name_list, reply_timeList, title_list, content_list, useful_list, useless_list, reply_list)
         
 
 if __name__=='__main__':
@@ -147,10 +161,6 @@ if __name__=='__main__':
         next_page = selector.xpath('//*[@id="content"]/div/div[1]/div[2]/span[4]/a')
         doubanURL = doubanURL + next_page[0].attrib['href']
     '''
-    
-    
-    
-    print(1+1)
 
 
 
