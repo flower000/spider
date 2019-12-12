@@ -10,6 +10,10 @@ import pandas as pd
 
 global count
 count = 0
+global wholepage
+wholepage = "427"
+global total
+total = 0
 
 # oneself
 def GetName(node):
@@ -37,12 +41,10 @@ def GetReplies(node):
 def GetNextp(node):
     global count
     count = count + 1
-    print('{}'.format(count))
-#    selector.xpath('//*[@id="content"]/div/div[1]/div[2]/span[4]/a')
-#//*[@id="content"]/div/div[1]/div[2]/span[contains(@data-total-page,"426")]   
-    pageNode = node.xpath('//*[@id="content"]/div/div[1]/div[2]/span[contains(@data-total-page,"426")]')
+    print('page: {} finished, {} items in all'.format(count, total))
+    pageNode = node.xpath('//*[@id="content"]/div/div[1]/div[2]/span[contains(@data-total-page, wholepage)]')
     if pageNode.__len__()==0:
-        print('*************************')
+        print('# parameter \'pageNode\' in functionn \'GetNextp\' is empty!')
         return ''
     else:
         nowpage = pageNode[0].xpath('text()')
@@ -51,7 +53,7 @@ def GetNextp(node):
             return ''
         else:
             temp = node.xpath('//*[@id="content"]/div/div[1]/div[2]/span[contains(@class,"next")]/a')
-            return temp[0].attrib['href']   
+            return temp[0].attrib['href']
 
 # write .CSV file 
 def writeFile(name_list, reply_timeList, title_list, content_list, useful_list, useless_list, reply_list):
@@ -76,27 +78,31 @@ def shawReview(URL):
 #    user_agent = "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:68.0) Gecko/20100101 Firefox/68.0"
     while True:
         HTMLstr = requests.get(doubanURL,headers={'User-Agent': user_agent}).content.decode()
-        selector = lxml.html.fromstring(HTMLstr)
-        shawReview = selector.xpath('//*[@id="content"]/div/div[1]/div[1]/div')
-        for each in range(shawReview.__len__()):
-            tempNode = shawReview[each]
-            # oneself
-            try:
-                name_list.append(GetName(tempNode)[0])
-                reply_timeList.append(GetRetime(tempNode)[0])
-                title_list.append(GetTitle(tempNode)[0])
-                content_list.append(GetContent(tempNode))
-                # followers
-                useful_list.append(GetUseful(tempNode))
-                useless_list.append(GetUseless(tempNode))
-                reply_list.append(GetReplies(tempNode)[0])
-            except IndexError:
-                pass
-        nextPage = GetNextp(selector)
-        if count==1000 or nextPage == '':
-            break
-        doubanURL = URL + nextPage
-        time.sleep(random.randint(0,2))
+        try:
+            selector = lxml.html.fromstring(HTMLstr)
+            shawReview = selector.xpath('//*[@id="content"]/div/div[1]/div[1]/div')
+            total = total + shawReview.__len__()
+            for each in range(shawReview.__len__()):
+                tempNode = shawReview[each]
+                # oneself
+                try:
+                    name_list.append(GetName(tempNode)[0])
+                    reply_timeList.append(GetRetime(tempNode)[0])
+                    title_list.append(GetTitle(tempNode)[0])
+                    content_list.append(GetContent(tempNode))
+                    # followers
+                    useful_list.append(GetUseful(tempNode))
+                    useless_list.append(GetUseless(tempNode))
+                    reply_list.append(GetReplies(tempNode)[0])
+                except IndexError:
+                    pass
+            nextPage = GetNextp(selector)
+            if count==1000 or nextPage == '':
+                break
+            doubanURL = URL + nextPage
+            time.sleep(random.randint(0,2))
+        except lxml.etree.ParserError:
+            break    
     writeFile(name_list, reply_timeList, title_list, content_list, useful_list, useless_list, reply_list)
         
 
