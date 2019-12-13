@@ -7,12 +7,20 @@ import random
 from fake_useragent import UserAgent       # fake userhead
 import csv
 import pandas as pd
-from multiprocessing.dummy import Pool
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed, wait, ALL_COMPLETED
+
+lock = threading.Lock()
 
 global count
 count = 0
 global total
 total = 0
+global T_times
+T_times = 5
+global reply_timeList, title_list, content_list, useful_list, useless_list, reply_list
+name_list, reply_timeList, title_list, content_list = [], [], [], []
+useful_list, useless_list, reply_list = [], [], []
 
 # oneself
 def GetName(node):
@@ -55,7 +63,7 @@ def GetNextp(node):
             return temp[0].attrib['href']
 
 # write .CSV file 
-def writeFile(name_list, reply_timeList, title_list, content_list, useful_list, useless_list, reply_list):
+def writeFile(name_list):
     csvdict = {'name':name_list,
                'reply_time':reply_timeList,
                'title':title_list,
@@ -67,29 +75,34 @@ def writeFile(name_list, reply_timeList, title_list, content_list, useful_list, 
     df =pd.DataFrame(csvdict)
     df.to_csv('test.csv', sep = ',', encoding = 'utf-8')
     #with open('shawshank\'s review', 'w', newline= '') as f:
-def onepage(selector,name_list, reply_timeList, title_list, content_list, useful_list, useless_list, reply_list):
-    global total
+def oneThread(tempNode):
+    lock.acquire()
+    try:
+        name_list.append(GetName(tempNode)[0])
+        reply_timeList.append(GetRetime(tempNode)[0])
+        title_list.append(GetTitle(tempNode)[0])
+        content_list.append(GetContent(tempNode))
+        # followers
+        useful_list.append(GetUseful(tempNode))
+        useless_list.append(GetUseless(tempNode))
+        reply_list.append(GetReplies(tempNode)[0])
+    except IndexError:
+        print('function \'oneThread\' error: out of range!')
+        pass
+    finally:
+        lock.release()
+    
+def onepage(selector):
+    global total, T_times
     shawReview = selector.xpath('//*[@id="content"]/div/div[1]/div[1]/div')
     total = total + shawReview.__len__()
-    for each in range(shawReview.__len__()):
-        tempNode = shawReview[each]
-        # oneself
-        try:
-            name_list.append(GetName(tempNode)[0])
-            reply_timeList.append(GetRetime(tempNode)[0])
-            title_list.append(GetTitle(tempNode)[0])
-            content_list.append(GetContent(tempNode))
-            # followers
-            useful_list.append(GetUseful(tempNode))
-            useless_list.append(GetUseless(tempNode))
-            reply_list.append(GetReplies(tempNode)[0])
-        except IndexError:
-            pass
-    return
+    # multi-threading pool
+    executor = ThreadPoolExecutor(max_workers = T_times)
+    all_task = [executor.submit(oneThread, (each)) for each in shawReview]
+    wait(all_task, return_when=ALL_COMPLETED)
 
+    
 def shawReview(URL):
-    name_list, reply_timeList, title_list, content_list = [], [], [], []
-    useful_list, useless_list, reply_list = [], [], []
     doubanURL = URL
     # random userAgent
     user_agent = UserAgent().random
@@ -98,12 +111,12 @@ def shawReview(URL):
         HTMLstr = requests.get(doubanURL,headers={'User-Agent': user_agent}).content.decode()
         try:
             selector = lxml.html.fromstring(HTMLstr)
-            onepage(selector,name_list, reply_timeList, title_list, content_list, useful_list, useless_list, reply_list)
+            onepage(selector)
             nextPage = GetNextp(selector)
             if count==1000 or nextPage == '':
                 break
             doubanURL = URL + nextPage
-            time.sleep(random.randint(0,2))
+            time.sleep(random.uniform(0,0.5))
         except lxml.etree.ParserError:
             break    
     writeFile(name_list, reply_timeList, title_list, content_list, useful_list, useless_list, reply_list)
